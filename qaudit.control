@@ -1,0 +1,5 @@
+# qaudit extension
+comment = 'Qunar SQL 审核工具'
+default_version = '1.0'
+module_pathname = '$libdir/qaudit'
+relocatable = true
