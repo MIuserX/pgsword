@@ -22,7 +22,7 @@
 #include "utils/elog.h"
 #include "utils/syscache.h"
 
-#include "qaudit.h"
+#include "pgsword.h"
 
 PG_MODULE_MAGIC;
 

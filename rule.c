@@ -11,7 +11,7 @@
 #include "utils/elog.h"
 #include "utils/syscache.h"
 
-#include "qaudit.h"
+#include "pgsword.h"
 
 // 将 timestamp 替换为 timestamptz
 void replaceTimestampToTimestamptz(ColumnDef *colDef) {

@@ -50,21 +50,21 @@
 #
 # Better look at some of the existing uses for examples...
 
-MODULE_big = qaudit
-OBJS = qaudit.o rule.o
+MODULE_big = pgsword
+OBJS = pgsword.o rule.o
 
-EXTENSION = qaudit
-DATA = qaudit--1.0.sql
-PGFILEDESC = "qaudit - for testing"
+EXTENSION = pgsword
+DATA = pgsword--1.0.sql
+PGFILEDESC = "pgsword - Qunar PostgreSQL audit tools"
 
 NO_INSTALLCHECK = 1
 
 ifdef USE_PGXS
-PG_CONFIG = /opt/pg10beta4/bin/pg_config
+PG_CONFIG = /opt/pg101/bin/pg_config
 PGXS := $(shell $(PG_CONFIG) --pgxs)
 include $(PGXS)
 else
-subdir = contrib/qaudit
+subdir = contrib/pgsword
 top_builddir = ../..
 include $(top_builddir)/src/Makefile.global
 include $(top_srcdir)/contrib/contrib-global.mk

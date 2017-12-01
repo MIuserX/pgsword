@@ -1,5 +1,5 @@
-# qaudit extension
-comment = 'Qunar SQL 审核工具'
+# pgsword extension
+comment = 'Qunar PostgreSQL audit tools'
 default_version = '1.0'
-module_pathname = '$libdir/qaudit'
+module_pathname = '$libdir/pgsword'
 relocatable = true
