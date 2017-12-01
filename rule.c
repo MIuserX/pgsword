@@ -13,18 +13,51 @@
 
 #include "pgsword.h"
 
+static bool isValidChar(const char ch);
+
 // 将 timestamp 替换为 timestamptz
 void replaceTimestampToTimestamptz(ColumnDef *colDef) {
     Oid   typOid;
-    int32 atttypmod; 
+    int32 atttypmod;
 
     typenameTypeIdAndMod(NULL, colDef->typeName, &typOid, &atttypmod);
     if ( typOid == 1114 ) {
-        ereport(ERROR, 
+        ereport(ERROR,
                 (errcode(ERRCODE_INTERNAL_ERROR),
                     errmsg("QunarSQLAudit: replace \"timestatmp\" to \"timestamptz\", please")));
     }
 }
 
-// 主键检测
+// DB Object
+bool isValidName(const char *objName) {
+    int i = 1;
 
+    if ( objName == NULL || strlen(objName) <= 0 )
+        return false;
+
+    if ( objName[0] >= '0' && objName[0] <= '9' )
+        return false;
+
+    while ( objName[i] ) {
+        if ( !isValidChar(objName[i]) ) {
+            return false;
+        }
+        ++i;
+    }
+
+    return true;
+}
+
+static bool isValidChar(const char ch) {
+    if (  (ch >= 'a' && ch <= 'z')
+        ||
+          ch == '_'
+        ||
+          (ch >= '0' && ch <= '9')
+    ) {
+
+        return true;
+    }
+
+    return false;
+}
