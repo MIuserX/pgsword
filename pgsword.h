@@ -1,6 +1,9 @@
 #ifndef _Qunar_SQL_Audit_H
 #define _Qunar_SQL_Audit_H
 
+#include "postgres.h"
+#include "catalog/pg_type.h"
+
 typedef struct ConstrList {
     bool   is_not_null;
     bool   is_primary_key;
@@ -10,6 +13,7 @@ typedef struct ConstrList {
 } ConstrList;
 
 bool isValidName(const char *objName);
-void replaceTimestampToTimestamptz(ColumnDef *coldef);
+void replaceTimestampToTimestamptz(ColumnDef *colDef);
+void replaceJsonToJsonb(ColumnDef *colDef);
 
 #endif

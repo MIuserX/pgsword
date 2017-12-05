@@ -24,6 +24,7 @@
 #include "utils/syscache.h"
 
 #include "pgsword.h"
+#include "tools.h"
 
 PG_MODULE_MAGIC;
 
@@ -87,18 +88,19 @@ static void my_process_utility(PlannedStmt *pstmt,
                 }
                 break;
 
+                        /* create schema */
+            case T_CreateSchemaStmt:
+                ereport(NOTICE,
+                    (errcode(ERRCODE_SUCCESSFUL_COMPLETION),
+                        errmsg("QunarSQLAudit: found a CREATE SCHEMA stmt")));
+                break;
+
+
             /* create database */
             case T_CreatedbStmt:
                 ereport(NOTICE,
                     (errcode(ERRCODE_SUCCESSFUL_COMPLETION),
                         errmsg("QunarSQLAudit: found a CREATE DATABASE stmt")));
-                break;
-
-            /* create schema */
-            case T_CreateSchemaStmt:
-                ereport(NOTICE,
-                    (errcode(ERRCODE_SUCCESSFUL_COMPLETION),
-                        errmsg("QunarSQLAudit: found a CREATE SCHEMA stmt")));
                 break;
 
             /* create indnx */
@@ -314,8 +316,11 @@ void checkRule(CreateStmt *stmt) {
 
         typenameTypeIdAndMod(NULL, colDef->typeName, &atttypid, &atttypmod);
 
-        // rule:
+        // rule: 建议用 timestamptz 替代 timestamp
         replaceTimestampToTimestamptz(colDef);
+
+        // rule: 建议用 jsonb 替代 json
+        replaceJsonToJsonb(colDef);
 
         // 获取 type name
         tuple = SearchSysCache1(TYPEOID, ObjectIdGetDatum(atttypid));
@@ -356,6 +361,8 @@ void checkRule(CreateStmt *stmt) {
         }
     }
 
+    // 无论是否符合规范，都退出
+    finishAudit();
 }
 
 int isKeyword(const char *str) {

@@ -51,7 +51,7 @@
 # Better look at some of the existing uses for examples...
 
 MODULE_big = pgsword
-OBJS = pgsword.o rule.o
+OBJS = pgsword.o rule.o tools.o
 
 EXTENSION = pgsword
 DATA = pgsword--1.0.sql
