@@ -1,11 +1,66 @@
 #include "postgres.h"
+#include "common/keywords.h"
+#include "catalog/namespace.h"
 #include "catalog/pg_type.h"     // Form_pg_type
 #include "access/htup_details.h" // GETSTRUCT
 #include "parser/parse_type.h"   //
 #include "utils/syscache.h"      // HeapTuple
 #include "utils/elog.h"          // ereport()
+#include "nodes/plannodes.h"
+#include "nodes/nodes.h"
+#include "nodes/parsenodes.h"
 
 #include "tools.h"
+
+int isKeyword(const char *str) {
+    const ScanKeyword *scanKeywords = NULL;
+
+    if ( str ) {
+        scanKeywords = ScanKeywordLookup(str,
+                                            ScanKeywords,
+                                            NumScanKeywords);
+
+        if ( scanKeywords ) {
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+void initConstrList(ConstrList *clist) {
+    clist->is_primary_key = false;
+    clist->is_unique   = false;
+    clist->is_not_null = false;
+    clist->has_default = false;
+    clist->default_str = NULL;
+}
+
+void getConstrList(ConstrList *cListStruct, List *cons) {
+    ListCell *clist;
+
+    foreach(clist, cons)
+    {
+        Constraint *con = (Constraint *) lfirst(clist);
+
+        switch ( con->contype ) {
+            case CONSTR_PRIMARY:
+                cListStruct->is_primary_key = true;
+                break;
+            case CONSTR_UNIQUE:
+                cListStruct->is_unique = true;
+                break;
+            case CONSTR_NOTNULL:
+                cListStruct->is_not_null = true;
+                break;
+            case CONSTR_DEFAULT:
+                cListStruct->has_default = true;
+                break;
+            default:
+                break;
+        }
+    }
+}
 
 ColInfo getColName (ColumnDef *colDef) {
     Oid            atttypid;
@@ -54,4 +109,163 @@ void finishAudit() {
     ereport(ERROR,
                 (errcode(ERRCODE_INTERNAL_ERROR),
                     errmsg("%s", mymsg)));
+}
+
+/* dispStmt - 打印出我们关注的 Stmt 的信息
+ *
+ *
+ * PlannedStmt 结构体: src/include/nodes/plannodes.h
+ * Node 结构体:        src/include/nodes/nodes.h
+ * nodeTag 函数:       src/include/nodes/parsenodes.h
+ * T_CreateStmt 常量:  src/include/nodes/nodes.h
+ * CreatedbStmt 常量:  src/include/nodes/parsenodes.h
+ */
+
+void dispStmt(PlannedStmt *pstmt) {
+    Node *parsetree = pstmt->utilityStmt;
+    char  mymsg[MYMSG_SIZE] = { 0 };
+
+    switch ( nodeTag(parsetree) ) {
+        case T_CreatedbStmt:
+            snprintf(mymsg, MYMSG_SIZE, "%s\"%s\"",
+                    "\b\b\b\b\b\b\b\b\bQunar PGSQL Auditor: dbname=",
+                    ((CreatedbStmt *)parsetree)->dbname);
+            ereport(NOTICE,
+                        (errcode(ERRCODE_SUCCESSFUL_COMPLETION),
+                            errmsg("%s", mymsg)));
+            break;
+
+        case T_CreateSchemaStmt:
+            snprintf(mymsg, MYMSG_SIZE, "%s\"%s\"",
+                    "\b\b\b\b\b\b\b\b\bQunar PGSQL Auditor: schemaname=",
+                    ((CreateSchemaStmt *)parsetree)->schemaname);
+            ereport(NOTICE,
+                        (errcode(ERRCODE_SUCCESSFUL_COMPLETION),
+                            errmsg("%s", mymsg)));
+            break;
+
+        case T_CreateStmt:
+            dispCreateStmt((CreateStmt *)parsetree);
+            break;
+
+        default:
+            break;
+    }
+}
+
+/*
+ *
+ * CreateStmt struct:
+ * ListCell struct:
+ * Form_pg_type struct:
+ * HeapTuple struct:
+ * List struct:
+ * ereport func:
+ * NOTICE macro:
+ * errcode func:
+ * errmsg func:
+ * ERRCODE_SUCCESSFUL_COMPLETION macro:
+ * ColumnDef struct:
+ * Oid type:
+ * int32 type:
+ * typenameTypeIdAndMod func:
+ * SearchSysCache1 func:
+ * TYPEOID macro:
+ * ObjectIdGetDatum func:
+ * HeapTupleIsValid func:
+ * GETSTRUCT macro:
+ * ReleaseSysCache func:
+ * NameListToString func:
+ * FuncCall struct:
+ * TypeCase struct:
+ */
+void dispCreateStmt(CreateStmt *stmt) {
+    ListCell    *listptr;
+    ListCell    *lc;
+    char        *typname = NULL;
+    Form_pg_type typeForm;
+    HeapTuple    tuple;
+    char         msg[1024] = { 0 };
+    char         default_info[512] = { 0 };
+    int          msg_pos = 0;
+    int          msgNBytes = 0;
+    ConstrList   constrList;
+    List        *argList = NULL;
+
+    if ( !stmt && !(stmt->relation)) {
+        return ;
+    }
+
+    if ( stmt->relation->relname ) {
+        snprintf(msg, 512, "my_process_utility:\n \
+                            table name = \"%s\"",
+                            stmt->relation->relname);
+
+        ereport(NOTICE,
+                    (errcode(ERRCODE_SUCCESSFUL_COMPLETION),
+                        errmsg("%s", msg)));
+    }
+
+    foreach(listptr, stmt->tableElts)
+    {
+        ColumnDef *colDef = lfirst(listptr);
+
+        Oid atttypid;
+        int32 atttypmod;
+        typenameTypeIdAndMod(NULL, colDef->typeName, &atttypid, &atttypmod);
+
+        tuple = SearchSysCache1(TYPEOID, ObjectIdGetDatum(atttypid));
+        if ( HeapTupleIsValid(tuple) ) {
+            typeForm = (Form_pg_type) GETSTRUCT(tuple);
+            typname = typeForm->typname.data;
+        }
+        ReleaseSysCache(tuple);
+
+        // 这个循环尝试从 colDef 中取出 column 的约束
+        initConstrList( &constrList );
+        if ( colDef->constraints ) {
+            getConstrList( &constrList, colDef->constraints );
+        }
+
+        if ( constrList.has_default ) {
+            snprintf(default_info, 512, "DEFAULT");
+            if ( colDef->raw_default != NULL ) {
+                snprintf(default_info + 7,
+                         505,
+                         "(raw, %s)",
+                         NameListToString(((FuncCall *)colDef->raw_default)->funcname)
+                        );
+            }
+
+            argList = ((FuncCall *)colDef->raw_default)->args;
+            foreach(lc, argList)
+            {
+                Node *aNode = lfirst(lc);
+                snprintf(default_info + strlen(default_info),
+                         512 - strlen(default_info),
+                         "args %d typ %d",
+                         nodeTag(aNode),
+                         nodeTag(((TypeCast *)aNode)->arg)
+                        );
+            }
+        }
+
+        msgNBytes = snprintf(msg + msg_pos,
+                                1024 - msg_pos,
+                                "colname \"%s\", typname \"%s\", typoid %d %s %s %s %s\n         ",
+                                colDef->colname,
+                                typname == NULL ? "unkown" : typname,
+                                atttypid,
+                                constrList.is_primary_key ? "PRIMARY KEY" : "",
+                                constrList.is_unique ? "UNIQUE" : "",
+                                constrList.is_not_null ? "NOT NULL" : "",
+                                constrList.has_default ? default_info : "");
+
+        msg_pos += msgNBytes;
+
+    }
+
+    ereport(NOTICE,
+                (errcode(ERRCODE_SUCCESSFUL_COMPLETION),
+                    errmsg("%s", msg)));
 }
