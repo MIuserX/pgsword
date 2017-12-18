@@ -23,6 +23,7 @@ ColInfo  getColName(ColumnDef *colDef);
 void     initConstrList(ConstrList *clist);
 void     getConstrList(ConstrList *cListStruct, List *cons);
 void     finishAudit(void);
+void     disp_VariableSetStmt(VariableSetStmt *stmt, char *mymsg);
 void     dispCreateStmt(CreateStmt *stmt);
 void     dispStmt(PlannedStmt *pstmt);
 int      isKeyword(const char *str);

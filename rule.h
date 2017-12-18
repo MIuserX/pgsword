@@ -14,7 +14,7 @@ bool isValidName(const char *objName);
 void replaceTimestampToTimestamptz(ColumnDef *colDef);
 void replaceJsonToJsonb(ColumnDef *colDef);
 void checkRule(CreateStmt *stmt);
-const char *getCreateName(Node *parsetree);
+const char *getCreateName(Node *parsetree, NodeTag stmtTag);
 void checkDBObjName(const char *name, NodeTag nodeTag);
 
 #endif // _Qunar_PGSQL_Audit_H

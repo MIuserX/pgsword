@@ -111,6 +111,19 @@ void finishAudit() {
                     errmsg("%s", mymsg)));
 }
 
+void disp_VariableSetStmt(VariableSetStmt *stmt, char *mymsg) {
+    snprintf(mymsg,
+             MYMSG_SIZE,
+             "%s %s, is_local = %s",
+             "\b\b\b\b\b\b\b\b\bswordtest: SET",
+             stmt->name,
+             stmt->is_local ? "True" : "False");
+
+    ereport(NOTICE,
+            (errcode(ERRCODE_SUCCESSFUL_COMPLETION),
+             errmsg("%s", mymsg)));
+}
+
 /* dispStmt - 打印出我们关注的 Stmt 的信息
  *
  *
@@ -128,7 +141,7 @@ void dispStmt(PlannedStmt *pstmt) {
     switch ( nodeTag(parsetree) ) {
         case T_CreatedbStmt:
             snprintf(mymsg, MYMSG_SIZE, "%s\"%s\"",
-                    "\b\b\b\b\b\b\b\b\bQunar PGSQL Auditor: dbname=",
+                    "\b\b\b\b\b\b\b\b\bPGSword: dbname=",
                     ((CreatedbStmt *)parsetree)->dbname);
             ereport(NOTICE,
                         (errcode(ERRCODE_SUCCESSFUL_COMPLETION),
@@ -137,7 +150,7 @@ void dispStmt(PlannedStmt *pstmt) {
 
         case T_CreateSchemaStmt:
             snprintf(mymsg, MYMSG_SIZE, "%s\"%s\"",
-                    "\b\b\b\b\b\b\b\b\bQunar PGSQL Auditor: schemaname=",
+                    "\b\b\b\b\b\b\b\b\bPGSword: schemaname=",
                     ((CreateSchemaStmt *)parsetree)->schemaname);
             ereport(NOTICE,
                         (errcode(ERRCODE_SUCCESSFUL_COMPLETION),
@@ -146,6 +159,18 @@ void dispStmt(PlannedStmt *pstmt) {
 
         case T_CreateStmt:
             dispCreateStmt((CreateStmt *)parsetree);
+            break;
+
+        case T_VariableSetStmt:
+            disp_VariableSetStmt((VariableSetStmt *)parsetree, mymsg);
+            break;
+
+        case T_DeleteStmt:
+            snprintf(mymsg, MYMSG_SIZE,
+                     "\b\b\b\b\b\b\b\b\bPGSword: DELETE stmt");
+            ereport(NOTICE,
+                (errcode(ERRCODE_SUCCESSFUL_COMPLETION),
+                    errmsg("%s", mymsg)));
             break;
 
         default:

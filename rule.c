@@ -313,10 +313,10 @@ void checkDBObjName(const char *name, NodeTag nodeTag) {
 /* getCreateName - 从 CreateXXXStmt 结构体中取出所创建对象的名字
  *
  */
-const char *getCreateName(Node *parsetree) {
+const char *getCreateName(Node *parsetree, NodeTag stmtTag) {
     const char *unknown = "unknown";
 
-    switch ( nodeTag(parsetree) ) {
+    switch ( stmtTag ) {
         /* tablespace */
         case T_CreateTableSpaceStmt:
             return ((CreateTableSpaceStmt *)parsetree)->tablespacename;
